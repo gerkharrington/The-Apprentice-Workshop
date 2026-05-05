@@ -5,7 +5,9 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Role Creator</title>
+  <title>The Apprentice Workshop</title>
+  <link rel="icon" type="image/x-icon"
+    href="https://github.com/gerkharrington/the-apprentice-workshop/blob/main/assets/favicon.png?raw=true">
 
   <style>
     /* -------------------[ Palette ]------------------- */
@@ -18,9 +20,9 @@
       --red: #7a0a0a;
       --light_red: #ae0e0e;
 
-      --guest: #f8e71c;
-      --stranger: #bb11ee;
-      --spirit: #abddff;
+      --type_guest: #f8e71c;
+      --type_stranger: #bb11ee;
+      --type_spirit: #abddff;
 
       --radius_main: 8px;
       --radius_border: 2px;
@@ -28,7 +30,7 @@
       --size_large: 32px;
       --size_small: 16px;
 
-      --margin_small: 8px;
+      --margin_small: 6px;
       --margin_main: 10px;
       --margin_large: 16px;
 
@@ -38,6 +40,9 @@
 
       --transition_short: 0.2s ease;
       --transition_long: 0.8s ease-out;
+
+      /* This one will change based on which role is selected */
+      --type_selected: var(--type_guest);
     }
 
     /* -------------------[ Keyframe Animations ]------------------- */
@@ -92,13 +97,13 @@
     }
 
     /* -------------------[ Default Styles ]------------------- */
+    /* Keeps everything on screen */
     * {
-      /* Keeps everything on screen */
       box-sizing: border-box;
     }
 
+    /* Body text */
     body {
-      /* Body text */
       margin: 0;
       display: flex;
       height: 100vh;
@@ -136,8 +141,8 @@
 
     input:focus,
     textarea:focus {
-      border-color: var(--guest);
-      box-shadow: 0 0 0 3px var(--dark_grey);
+      border-color: var(--type_selected);
+      box-shadow: 0 0 0 var(--radius_border) color-mix(in srgb, var(--type_selected) 40%, transparent);
       transform: translateY(-1px);
     }
 
@@ -184,7 +189,7 @@
       display: flex;
       flex-direction: column;
       backdrop-filter: blur(10px);
-      border-right: var(--radius_border) solid var(--light_grey);
+      border-right: var(--radius_border) solid var(--dark_grey);
       animation: animation_slide_right var(--transition_long);
     }
 
@@ -202,9 +207,18 @@
       padding: 8px var(--padding_main);
       margin-bottom: var(--margin_small);
       border-radius: var(--radius_main);
-      transition: transform var(--transition_short), background var(--transition_short), opacity var(--transition_short);
       position: relative;
       overflow: hidden;
+      z-index: 0;
+      max-height: 60px;
+      transition: transform var(--transition_short), opacity var(--transition_short), filter var(--transition_short), background var(--transition_short);
+    }
+
+    /* This puts everything above the coloured gradient when you hover over and select a role by increasing its z-index */
+    /* The sidebar_delete element is at a z-index above this, so it's in front (priority for clicking) */
+    .sidebar_entry>* {
+      position: relative;
+      z-index: 1;
     }
 
     .sidebar_entry:hover {
@@ -216,15 +230,57 @@
     }
 
     .sidebar_entry.selected {
-      background: var(--dark_grey);
       padding-left: 6px;
-      border-left: 6px solid var(--guest);
       box-shadow: inset 0 0 0 2px var(--dark_grey);
+    }
+
+    .sidebar_entry.sidebar_type_guest.selected {
+      border-left: 6px solid var(--type_guest);
+    }
+
+    .sidebar_entry.sidebar_type_stranger.selected {
+      border-left: 6px solid var(--type_stranger);
+    }
+
+    .sidebar_entry.sidebar_type_spirit.selected {
+      border-left: 6px solid var(--type_spirit);
     }
 
     .sidebar_entry.removing {
       opacity: 0;
-      transform: translateX(-10px) scale(var(--shrink));
+      transform: translateX(-20px) scale(var(--shrink));
+      filter: blur(4px);
+      transition: opacity var(--transition_short), transform var(--transition_short), filter var(--transition_short);
+    }
+
+    .sidebar_entry::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition_short);
+      z-index: 0;
+    }
+
+    .sidebar_entry:hover::before {
+      opacity: 0.18;
+    }
+
+    .sidebar_entry.selected::before {
+      opacity: 0.18;
+    }
+
+    .sidebar_type_guest::before {
+      background: linear-gradient(45deg, var(--type_guest), transparent);
+    }
+
+    .sidebar_type_stranger::before {
+      background: linear-gradient(45deg, var(--type_stranger), transparent);
+    }
+
+    .sidebar_type_spirit::before {
+      background: linear-gradient(45deg, var(--type_spirit), transparent);
     }
 
     .sidebar_add {
@@ -256,6 +312,8 @@
       border: none;
       border-radius: var(--radius_main);
       transition: transform var(--transition_short), background var(--transition_short);
+      /* It's important the z-index is above everything else in the sidebar entry */
+      z-index: 2;
     }
 
     .sidebar_delete:active {
@@ -269,14 +327,26 @@
     .sidebar_container {
       display: flex;
       align-items: center;
-      gap: var(--radius_main);
+      gap: 10px;
+      flex: 0 0 auto;
+      min-width: 0;
+    }
+
+    .sidebar_name {
       flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: right;
     }
 
     .sidebar_icon {
       width: 24px;
       height: 24px;
       object-fit: cover;
+      flex: 0 0 auto;
+
     }
 
     .sidebar_list::-webkit-scrollbar {
@@ -290,6 +360,41 @@
 
     .sidebar_list::-webkit-scrollbar-thumb:hover {
       background: var(--dark_grey);
+    }
+
+    .sidebar_type {
+      font-size: var(--size_small);
+      text-transform: uppercase;
+      color: var(--light_grey);
+      margin: var(--margin_large) 0 var(--margin_main) 4px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      user-select: none;
+      transition: opacity var(--transition_short);
+    }
+
+    .sidebar_type:hover {
+      opacity: 0.5;
+    }
+
+    .sidebar_type .arrow {
+      display: inline-block;
+      width: var(--size_small);
+      text-align: center;
+      transition: transform var(--transition_short);
+    }
+
+    .sidebar_type .arrow.collapsed {
+      transform: rotate(-90deg);
+    }
+
+    .sidebar_io_row {
+      display: flex;
+      gap: var(--margin_small);
+    }
+
+    .sidebar_io_row button {
+      flex: 1;
     }
 
     /* -------------------[ Editor Style ]------------------- */
@@ -322,6 +427,7 @@
     }
 
     .editor_icon_upload {
+      flex: 0 0 50px;
       width: 50px;
       height: 50px;
       position: relative;
@@ -361,6 +467,19 @@
       display: none;
       animation: animation_fade_in var(--transition_short);
     }
+
+    .editor_footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      color: var(--dark_grey);
+      font-size: var(--size_small);
+      text-align: right;
+      pointer-events: none;
+      /* Keeps this in front of everything */
+      z-index: 9999;
+    }
   </style>
 
 </head>
@@ -368,13 +487,25 @@
 <body>
 
   <aside class="sidebar_main">
+    <!-- Header text -->
     <h2>Roles</h2>
+    <!-- The sidebar list itself -->
     <div id="sidebar_list" class="sidebar_list"></div>
+    <!-- Add role button -->
     <button id="sidebar_add" class="sidebar_add">+ Add Role</button>
+    <!-- Save button -->
+    <button id="sidebar_save" class="sidebar_add">Save</button>
+    <!-- The import / export row -->
+    <div class="sidebar_io_row">
+      <button id="sidebar_import" class="sidebar_add">Import</button>
+      <button id="sidebar_export" class="sidebar_add">Export</button>
+    </div>
+    <!-- Hidden file input for importing JSONs -->
+    <input id="sidebar_import_file" type="file" accept="application/json" class="fake_hidden">
   </aside>
 
   <main class="editor_main">
-    <h2>Role Editor</h2>
+    <h2>The Apprentice Workshop</h2>
 
     <p id="editor_empty" class="editor_empty">Click "Add Role" to begin workshopping!</p>
 
@@ -413,9 +544,30 @@
     </div>
   </main>
 
+  <footer id="editor_footer" class="editor_footer">
+    <p>v<span id="editor_footer_version" class="editor_footer_version"></span> | © 2026-<span id="editor_footer_year"
+        class="editor_footer_year"></span> Gerk Harrington. All rights
+      reserved.
+    </p>
+  </footer>
+
   <script>
+    /* -------------------[ Site Data ]------------------- */
+    const site_version = "0.9.0";
+
+    /* -------------------[ General Variables ]------------------- */
+    /* List of all roles */
     let data_roles = [];
+    /* Role selected to be edited right now */
     let sidebar_selected = null;
+    /* Whether our data is up-to-date with local storage */
+    let data_saved = false;
+    /* Variable for collapsing role type sections */
+    let sidebar_collapsed = {
+      Guest: false,
+      Stranger: false,
+      Spirit: false
+    };
 
     /* -------------------[ Cache Objects In Variables ]------------------- */
     const element_single_role_name = document.getElementById("single_role_name");
@@ -423,132 +575,258 @@
     const element_single_role_ability2 = document.getElementById("single_role_ability2");
     const element_single_role_icon = document.getElementById("single_role_icon");
     const element_single_role_type = document.getElementById("single_role_type");
+    const element_sidebar_list = document.getElementById("sidebar_list");
+    const element_sidebar_add = document.getElementById("sidebar_add");
+    const element_sidebar_save = document.getElementById("sidebar_save");
+    const element_sidebar_import = document.getElementById("sidebar_import");
+    const element_sidebar_export = document.getElementById("sidebar_export");
+    const element_sidebar_import_file = document.getElementById("sidebar_import_file");
     const element_editor_input = document.getElementById("editor_input");
     const element_editor_empty = document.getElementById("editor_empty");
     const element_editor_icon_preview = document.getElementById("editor_icon_preview");
     const element_editor_icon_upload = document.getElementById("editor_icon_upload");
     const element_editor_icon_placeholder = document.getElementById("editor_icon_placeholder");
-    const element_sidebar_list = document.getElementById("sidebar_list");
-    const element_sidebar_add = document.getElementById("sidebar_add");
+    const element_editor_footer_year = document.getElementById("editor_footer_year");
+    const element_editor_footer_version = document.getElementById("editor_footer_version");
+
+    /* -------------------[ Update Save Button Text ]------------------- */
+    function sidebar_render_save() {
+      if (data_saved) {
+        element_sidebar_save.textContent = "✓ Saved";
+      } else {
+        element_sidebar_save.textContent = "Save";
+      }
+    }
 
     /* -------------------[ Create & Render Sidebar ]------------------- */
     function sidebar_render() {
       const list = element_sidebar_list;
       list.innerHTML = "";
 
-      /* Hierarchy for sorting order */
-      const type_order = {
-        "Guest": 0,
-        "Stranger": 1,
-        "Spirit": 2
-      };
+      /* Hierarchy for role sorting */
+      const type_order = ["Guest", "Stranger", "Spirit"];
 
-      /* Sort roles based on hierarchy */
-      const sorted_roles = data_roles
-        .map((role, index) => ({ role, index }))
-        .sort((a, b) => type_order[a.role.type] - type_order[b.role.type]);
+      type_order.forEach(type => {
+        const roles_of_type = data_roles
+          .map((role, index) => ({ role, index }))
+          .filter(item => (item.role.type || "Guest") === type);
 
-      /* Start the for each loop, going through the sorted list one at a time */
-      sorted_roles.forEach(({ role, index }) => {
-        const div = document.createElement("div");
-        div.className = "sidebar_entry";
+        /* If no roles are of this role type, we don't render this category at all */
+        if (roles_of_type.length === 0) return;
 
-        if (index === sidebar_selected) {
-          div.classList.add("selected");
+        /* Create header text for this role type category */
+        const header = document.createElement("div");
+        header.className = "sidebar_type";
+        /* Add the little arrow to indicate when the category is collapsed */
+        const arrow = document.createElement("span");
+        arrow.className = "arrow";
+        arrow.textContent = "▼";
+        if (sidebar_collapsed[type]) {
+          arrow.classList.add("collapsed");
         }
+        header.appendChild(arrow);
+        header.appendChild(document.createTextNode(" " + type));
+        /* Code for clicking to collapse / uncollapse the section */
+        header.onclick = () => {
+          sidebar_collapsed[type] = !sidebar_collapsed[type];
+          const arrow = header.querySelector(".arrow");
+          arrow.classList.toggle("collapsed");
+          setTimeout(() => {
+            sidebar_render();
+          }, 200);
+        };
+        list.appendChild(header);
 
-        /* -------------------[ Create Delete Button ]------------------- */
-        const sidebar_delete = document.createElement("button");
-        sidebar_delete.textContent = "-";
-        sidebar_delete.classList.add("sidebar_delete");
-        sidebar_delete.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm("Delete this role?")) {
-            const element = e.target.closest(".sidebar_entry");
-            element.classList.add("removing");
-            setTimeout(() => {
-              data_roles.splice(index, 1);
-              if (data_roles.length === 0) {
-                sidebar_selected = null;
-                editor_clear();
-              } else {
-                sidebar_selected = Math.min(index, data_roles.length - 1);
-              }
-              sidebar_render();
-              data_roles_load();
-            }, 200);
+        /* Don't render these roles if the section is collapsed */
+        if (sidebar_collapsed[type]) return;
+
+        /* Render all the roles in this category */
+        roles_of_type.forEach(({ role, index }) => {
+          const div = document.createElement("div");
+          div.className = "sidebar_entry";
+
+          /* Add classes for CSS */
+          div.classList.add(`sidebar_type_${(role.type || "Guest").toLowerCase()}`);
+
+          if (role.id === sidebar_selected) {
+            div.classList.add("selected");
           }
-        };
 
-        /* -------------------[ Create Role Icon ]------------------- */
-        const container = document.createElement("div");
-        container.className = "sidebar_container";
+          /* Delete button for this role */
+          const sidebar_delete = document.createElement("button");
+          sidebar_delete.textContent = "-";
+          sidebar_delete.classList.add("sidebar_delete");
+          sidebar_delete.onclick = (e) => {
+            e.stopPropagation();
+            if (!confirm("Delete this role?")) return;
+            const element = e.target.closest(".sidebar_entry");
+            data_roles_delete(element);
+          };
 
-        if (role.icon) {
-          const icon = document.createElement("img");
-          icon.src = role.icon;
-          icon.className = "sidebar_icon";
-          icon.alt = "Role Icon";
-          container.appendChild(icon);
-        }
+          const container = document.createElement("div");
+          container.className = "sidebar_container";
 
-        /* -------------------[ Render Everything Together ]------------------- */
-        const name = document.createElement("span");
+          /* Add the role icon display */
+          if (role.icon) {
+            const icon = document.createElement("img");
+            icon.src = role.icon;
+            icon.className = "sidebar_icon";
+            icon.alt = "Role Icon";
+            container.appendChild(icon);
+          }
 
-        name.textContent = role.name;
+          const name = document.createElement("span");
+          name.textContent = role.name;
+          name.className = "sidebar_name";
 
-        div.appendChild(sidebar_delete);
-        div.appendChild(container);
-        div.appendChild(name);
+          /* This is the order of how everything displays in one sidebar slot */
+          div.appendChild(sidebar_delete);
+          div.appendChild(container);
+          div.appendChild(name);
 
-        div.onclick = () => {
-          /* Makes it clickable to select */
-          sidebar_selected = index;
-          sidebar_render();
-          data_roles_load();
-        };
+          /* Click this line to select this role */
+          div.onclick = () => {
+            sidebar_selected = role.id;
+            sidebar_render();
+            data_roles_load();
+          };
 
-        list.appendChild(div);
+          list.appendChild(div);
+        });
       });
+    }
+
+    /* -------------------[ Generate Unique UUID ]------------------- */
+    function data_roles_uuid() {
+      return crypto.randomUUID ? crypto.randomUUID() :
+        'id_' + Math.random().toString(16).slice(2) + Date.now();
+    }
+
+    /* -------------------[ Load From Local Storage ]------------------- */
+    function data_storage_load() {
+      const saved = localStorage.getItem("data_storage");
+      data_saved = true;
+      if (saved) {
+        try {
+          data_roles = JSON.parse(saved);
+        } catch (e) {
+          data_roles = [];
+        }
+      }
+    }
+
+    /* -------------------[ Export As JSON ]------------------- */
+    function data_export() {
+      const blob = new Blob([JSON.stringify(data_roles, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "roles.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    /* -------------------[ Import From JSON ]------------------- */
+    function data_import(file) {
+      if (!file) return;
+      const sidebar_file_reader = new FileReader();
+      sidebar_file_reader.onload = function (e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (!Array.isArray(parsed)) { return; }
+          data_roles = parsed;
+          sidebar_selected = data_roles.length ? data_roles[0].id : null;
+          data_saved = false;
+          sidebar_render();
+          sidebar_render_save();
+          if (sidebar_selected) {
+            data_roles_load();
+          } else {
+            editor_clear();
+          }
+        } catch (err) {
+          alert("Failed to load file! Please try another file.\nError B-4: File JSON is invalid.");
+        }
+      };
+      sidebar_file_reader.readAsText(file);
     }
 
     /* -------------------[ Add New Role ]------------------- */
     function data_roles_add() {
-      data_roles.push({ name: "Untitled Role", ability1: "", ability2: "", icon: "", type: "Guest" });
-      sidebar_selected = data_roles.length - 1;
+      /* Choose what type the role will be created as (guest by default) */
+      const default_role_type = sidebar_selected !== null ? (data_roles.find(r => r.id === sidebar_selected)?.type || "Guest") : "Guest";
+      /* This adds the actual role with all default data */
+      data_roles.push({
+        id: data_roles_uuid(),
+        name: "Untitled Role",
+        ability1: "",
+        ability2: "",
+        icon: "",
+        type: default_role_type
+      });
+      sidebar_selected = data_roles[data_roles.length - 1].id;
       sidebar_render();
+      data_saved = false;
+      sidebar_render_save();
       data_roles_load();
+    }
+
+    /* -------------------[ Delete Role ]------------------- */
+    function data_roles_delete(element) {
+      if (!element) return;
+      const on_transition_end = (e) => {
+        if (e.propertyName !== "opacity") return;
+        element.removeEventListener("transitionend", on_transition_end);
+        /* Properly delete the role after the animation plays */
+        data_roles = data_roles.filter(r => r.id !== sidebar_selected);
+        /* Select a new role */
+        if (data_roles.length === 0) {
+          sidebar_selected = null;
+        } else {
+          sidebar_selected = data_roles[0].id;
+        }
+        /* Re-render and set some variables */
+        sidebar_render();
+        data_saved = false;
+        sidebar_render_save();
+        data_roles_load();
+      };
+      element.addEventListener("transitionend", on_transition_end);
+      element.classList.add("removing");
     }
 
     /* -------------------[ Load Roles ]------------------- */
     function data_roles_load() {
-      if (sidebar_selected === null) {
+      const role = data_roles.find(r => r.id === sidebar_selected);
+      if (!role) {
         editor_clear();
         return;
       }
-      const role = data_roles[sidebar_selected];
-
       element_single_role_name.value = role.name;
       element_single_role_ability1.value = role.ability1;
       element_single_role_ability2.value = role.ability2;
       element_single_role_type.value = role.type || "Guest";
-
       editor_icon_update(role.icon);
-
       editor_set_visible(true);
+      /* Update input and textarea highlight colour */
+      let colour = getComputedStyle(document.documentElement).getPropertyValue("--type_guest").trim();
+      if (role.type === "Stranger") {
+        colour = getComputedStyle(document.documentElement).getPropertyValue("--type_stranger").trim();
+      } else if (role.type === "Spirit") {
+        colour = getComputedStyle(document.documentElement).getPropertyValue("--type_spirit").trim();
+      }
+      document.documentElement.style.setProperty("--type_selected", colour);
     }
 
+    /* -------------------[ Clear Editor For When No Roles Are There ]------------------- */
     function editor_clear() {
       element_single_role_name.value = "";
       element_single_role_icon.value = "";
       element_single_role_ability1.value = "";
       element_single_role_ability2.value = "";
       element_single_role_type.value = "Guest";
-
       element_editor_icon_preview.style.display = "none";
       element_editor_icon_preview.src = "";
       element_editor_icon_upload.classList.remove("has_icon");
-
       editor_set_visible(false);
     }
 
@@ -561,19 +839,19 @@
     /* -------------------[ Handle File Reader For Image Upload ]------------------- */
     function editor_icon_upload(file, onSuccess) {
       if (!file) {
-        alert("Failed to load image! Please try another file.\nError A-1: No file uploaded.");
+        alert("Failed to load file! Please try another file.\nError A-1: No file uploaded.");
         return;
       }
       if (!file.type) {
-        alert("Failed to load image! Please try another file.\nError B-1: File type data not found.");
+        alert("Failed to load file! Please try another file.\nError B-1: File type data not found.");
         return;
       }
       if (!file.type.startsWith("image/")) {
-        alert("Failed to load image! Please try another file.\nError B-2: Not a valid image file type.");
+        alert("Failed to load file! Please try another file.\nError B-2: Not a valid image file type.");
         return;
       }
       if (file.size > 2 * 1024 * 1024) {
-        alert("Failed to load image! Please try another file.\nError B-3: File size is dangerously large (>2MB).");
+        alert("Failed to load file! Please try another file.\nError B-3: File size is dangerously large (>2MB).");
         return;
       }
       const editor_file_reader = new FileReader();
@@ -581,7 +859,7 @@
         onSuccess(e.target.result);
       };
       editor_file_reader.onerror = function () {
-        alert("Failed to load image! Please try another file.\nError A-2: File reader error.");
+        alert("Failed to load file! Please try another file.\nError A-2: File reader error.");
       };
       editor_file_reader.readAsDataURL(file);
     }
@@ -603,27 +881,40 @@
       }
     }
 
+    /* -------------------[ Event Listeners ]------------------- */
     /* Changing role name */
     element_single_role_name.addEventListener("input", function () {
       if (sidebar_selected === null) return;
       if (this.value.trim() === "") {
-        data_roles[sidebar_selected].name = "Untitled Role";
+        data_roles.find(r => r.id === sidebar_selected).name = "Untitled Role";
       } else {
-        data_roles[sidebar_selected].name = this.value;
+        const role = data_roles.find(r => r.id === sidebar_selected);
+        if (!role) return;
+        role.name = this.value;
       }
       sidebar_render();
+      data_saved = false;
+      sidebar_render_save();
     });
 
     /* Changing ability 1 */
     element_single_role_ability1.addEventListener("input", function () {
       if (sidebar_selected === null) return;
-      data_roles[sidebar_selected].ability1 = this.value;
+      const role = data_roles.find(r => r.id === sidebar_selected);
+      if (!role) return;
+      role.ability1 = this.value;
+      data_saved = false;
+      sidebar_render_save();
     });
 
     /* Changing ability 2 */
     element_single_role_ability2.addEventListener("input", function () {
       if (sidebar_selected === null) return;
-      data_roles[sidebar_selected].ability2 = this.value;
+      const role = data_roles.find(r => r.id === sidebar_selected);
+      if (!role) return;
+      role.ability2 = this.value;
+      data_saved = false;
+      sidebar_render_save();
     });
 
     /* Changing image icon */
@@ -631,24 +922,62 @@
       if (sidebar_selected === null) return;
       const file = this.files[0];
       editor_icon_upload(file, (icon) => {
-        data_roles[sidebar_selected].icon = icon;
+        const role = data_roles.find(r => r.id === sidebar_selected);
+        if (!role) return;
+        role.icon = icon;
         editor_icon_update(icon);
         sidebar_render();
+        data_saved = false;
+        sidebar_render_save();
       });
     });
 
     /* Changing role type */
     element_single_role_type.addEventListener("change", function () {
       if (sidebar_selected === null) return;
-      data_roles[sidebar_selected].type = this.value;
+      const role = data_roles.find(r => r.id === sidebar_selected);
+      if (!role) return;
+      role.type = this.value;
       sidebar_render();
+      data_saved = false;
+      sidebar_render_save();
+      /* Update input and textarea highlight colour */
+      let colour = getComputedStyle(document.documentElement).getPropertyValue("--type_guest").trim();
+      if (role.type === "Stranger") {
+        colour = getComputedStyle(document.documentElement).getPropertyValue("--type_stranger").trim();
+      } else if (role.type === "Spirit") {
+        colour = getComputedStyle(document.documentElement).getPropertyValue("--type_spirit").trim();
+      }
+      document.documentElement.style.setProperty("--type_selected", colour);
     });
 
     /* Makes the "Add Role" button clickable to add a new role */
     element_sidebar_add.addEventListener("click", data_roles_add);
 
+    /* Makes the "Save" button clickable to save all data to local storage */
+    element_sidebar_save.addEventListener("click", () => {
+      localStorage.setItem("data_storage", JSON.stringify(data_roles));
+      data_saved = true;
+      sidebar_render_save();
+    });
+
     /* Makes the icon in the editor clickable to upload a different one */
     element_editor_icon_upload.addEventListener("click", () => { element_single_role_icon.click(); });
+
+    /* Makes the export button clickable to export a JSON file */
+    element_sidebar_export.addEventListener("click", data_export);
+
+    /* Makes the import button clickable to load a JSON file (it technically "clicks" the hidden file upload area) */
+    element_sidebar_import.addEventListener("click", () => {
+      if (confirm("This will override all current data. Continue?")) { element_sidebar_import_file.click(); }
+    });
+
+    /* Checks the hidden import file upload area for importing a JSON (indirectly "clicked" by the import button) */
+    element_sidebar_import_file.addEventListener("change", function () {
+      const file = this.files[0];
+      data_import(file);
+      this.value = "";
+    });
 
     /* -------------------[ Drag & Drop Icons ]------------------- */
     /* Event listeners for all drap & drop related actions */
@@ -663,16 +992,69 @@
       if (sidebar_selected === null) return;
       const file = e.dataTransfer.files[0];
       editor_icon_upload(file, (icon) => {
-        data_roles[sidebar_selected].icon = icon;
+        const role = data_roles.find(r => r.id === sidebar_selected);
+        if (!role) return;
+        role.icon = icon;
         editor_icon_update(icon);
         sidebar_render();
+        data_saved = false;
+        sidebar_render_save();
       });
     });
 
-    /* -------------------[ Clear Editor When There Are No Roles ]------------------- */
+    /* -------------------[ Unsaved Changes Warning ]------------------- */
+    window.addEventListener("beforeunload", function (e) {
+      if (!data_saved) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    });
+
+    /* -------------------[ Keyboard Shortcuts ]------------------- */
+    window.addEventListener("keydown", function (e) {
+      /* Detect keys (Windows "Ctrl" and Mac "command") */
+      const key_ctrl = e.ctrlKey || e.metaKey;
+      /* Ctrl + S (Save data) */
+      if (key_ctrl && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        element_sidebar_save.click();
+        return;
+      }
+      /* Ctrl + Enter (Add new role) */
+      if (key_ctrl && e.key.toLowerCase() === "enter") {
+        e.preventDefault();
+        data_roles_add();
+        return;
+      }
+      /* Ctrl + Delete (Delete role) */
+      if (key_ctrl && (e.key.toLowerCase() === "delete" || e.key.toLowerCase() === "backspace")) {
+        e.preventDefault();
+        if (sidebar_selected === null) return;
+        const role = data_roles.find(r => r.id === sidebar_selected);
+        if (!role) return;
+        const element = document.querySelector(".sidebar_entry.selected");
+        if (element) {
+          element.classList.add("removing");
+        }
+        data_roles_delete();
+        return;
+      }
+    });
+
+    /* -------------------[ Innitiate Editor (This Runs On Page Load) ]------------------- */
+    /* Add the relevant data to the footer */
+    element_editor_footer_year.textContent = new Date().getFullYear();
+    element_editor_footer_version.textContent = site_version;
+    data_storage_load();
     if (data_roles.length === 0) {
       editor_clear();
+    } else {
+      sidebar_selected = data_roles[0].id;
+      data_roles_load();
     }
+    sidebar_render();
+    sidebar_render_save();
+
   </script>
 
 </body>
